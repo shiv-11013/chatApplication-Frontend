@@ -4,7 +4,7 @@ import axios from "axios";
 import MessageList from "./MessageList";
 import "./chat.css";
 
-// ✅ URL handling (local + render)
+// url handling ( local + render ) Railway after
 const BASE_URL =
   window.location.hostname === "localhost"
     ? "http://localhost:5001"
