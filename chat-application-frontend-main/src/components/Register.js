@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const BASE_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:5001"
+    : "https://chatapplication-backend-4nhj.onrender.com";
+
 const Register = ({ setUser }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -8,7 +13,7 @@ const Register = ({ setUser }) => {
 
   const handleRegister = async () => {
     try {
-      const { data } = await axios.post("http://localhost:5001/auth/register", {
+      const { data } = await axios.post(`${BASE_URL}/auth/register`, {
         username,
         password,
       });
@@ -32,6 +37,7 @@ const Register = ({ setUser }) => {
       <div className="card-body px-5">
         <h2>Register</h2>
         <p>Not a user yet? Register here</p>
+
         <input
           type="text"
           placeholder="Username"
@@ -46,12 +52,14 @@ const Register = ({ setUser }) => {
           className="form-control form-control-lg mt-3"
           onChange={(e) => setPassword(e.target.value)}
         />
+
         <button
           className="btn btn-success btn-lg mt-3"
           onClick={handleRegister}
         >
           Register
         </button>
+
         {registerationSuccess && <p>{registerationSuccess}</p>}
       </div>
     </div>
