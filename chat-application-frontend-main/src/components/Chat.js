@@ -4,7 +4,13 @@ import axios from "axios";
 import MessageList from "./MessageList";
 import "./chat.css";
 
-const socket = io("http://localhost:5001");
+// ✅ URL handling (local + render)
+const BASE_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:5001"
+    : "https://chatapplication-backend-4nhj.onrender.com";
+
+const socket = io(BASE_URL);
 
 export const Chat = ({ user }) => {
   const [users, setUsers] = useState([]);
@@ -19,7 +25,7 @@ export const Chat = ({ user }) => {
 
     const fetchUsers = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5001/users", {
+        const { data } = await axios.get(`${BASE_URL}/users`, {
           params: { currentUser: user.username },
         });
         setUsers(data);
@@ -96,7 +102,6 @@ export const Chat = ({ user }) => {
       roomId,
     };
 
-    // show instantly (green + time)
     setMessages((prev) => [
       ...prev,
       {
@@ -106,7 +111,6 @@ export const Chat = ({ user }) => {
       },
     ]);
 
-    // set single tick
     setStatus((prev) => ({
       ...prev,
       [tempId]: "sent",
@@ -132,7 +136,7 @@ export const Chat = ({ user }) => {
 
   const fetchMessages = async (receiver) => {
     try {
-      const { data } = await axios.get("http://localhost:5001/messages", {
+      const { data } = await axios.get(`${BASE_URL}/messages`, {
         params: { sender: user.username, receiver },
       });
 
@@ -148,7 +152,6 @@ export const Chat = ({ user }) => {
 
       socket.emit("join_room", roomId);
 
-      // delivered for old messages
       for (let i = 0; i < data.length; i++) {
         if (data[i].status === "sent" && data[i].receiver === user.username) {
           socket.emit("message_delivered", {
@@ -158,7 +161,6 @@ export const Chat = ({ user }) => {
         }
       }
 
-      // mark seen
       socket.emit("mark_messages_seen", {
         sender: receiver,
         receiver: user.username,
