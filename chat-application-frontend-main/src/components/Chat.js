@@ -15,10 +15,8 @@ export const Chat = ({ user }) => {
   const [typingUser, setTypingUser] = useState("");
 
   useEffect(() => {
-    // user online
     socket.emit("user_online", user.username);
 
-    // fetch users
     const fetchUsers = async () => {
       try {
         const { data } = await axios.get("http://localhost:5001/users", {
@@ -31,23 +29,22 @@ export const Chat = ({ user }) => {
     };
     fetchUsers();
 
-    // receive message
     socket.on("receive_message", (data) => {
-      console.log("Message received");
-
-      setMessages((prev) => [...prev, data]);
+      setMessages((prev) => {
+        const exists = prev.find((m) => m._id === data._id);
+        if (exists) return prev;
+        return [...prev, data];
+      });
 
       const roomId = [user.username, data.sender].sort().join("_");
 
       if (data.sender === currentChat) {
-        // mark seen
         socket.emit("mark_messages_seen", {
           sender: data.sender,
           receiver: user.username,
           roomId,
         });
       } else {
-        // mark delivered
         socket.emit("message_delivered", {
           messageId: data._id,
           roomId,
@@ -55,14 +52,13 @@ export const Chat = ({ user }) => {
       }
     });
 
-    // update status
     socket.on("status_updated", (data) => {
-      setStatus((prev) => {
-        return { ...prev, [data.messageId]: data.status };
-      });
+      setStatus((prev) => ({
+        ...prev,
+        [data.messageId]: data.status,
+      }));
     });
 
-    // seen update
     socket.on("all_messages_seen", () => {
       setStatus((prev) => {
         const updated = { ...prev };
@@ -73,13 +69,9 @@ export const Chat = ({ user }) => {
       });
     });
 
-    // typing
     socket.on("user_typing", (sender) => {
       setTypingUser(sender);
-
-      setTimeout(() => {
-        setTypingUser("");
-      }, 1000);
+      setTimeout(() => setTypingUser(""), 1000);
     });
 
     return () => {
@@ -95,6 +87,8 @@ export const Chat = ({ user }) => {
 
     const roomId = [user.username, currentChat].sort().join("_");
 
+    const tempId = Date.now().toString();
+
     const messageData = {
       sender: user.username,
       receiver: currentChat,
@@ -102,8 +96,36 @@ export const Chat = ({ user }) => {
       roomId,
     };
 
-    // send to server
-    socket.emit("send_message", messageData);
+    // show instantly (green + time)
+    setMessages((prev) => [
+      ...prev,
+      {
+        ...messageData,
+        _id: tempId,
+        createdAt: new Date(),
+      },
+    ]);
+
+    // set single tick
+    setStatus((prev) => ({
+      ...prev,
+      [tempId]: "sent",
+    }));
+
+    socket.emit("send_message", messageData, (res) => {
+      setStatus((prev) => {
+        const updated = { ...prev };
+        delete updated[tempId];
+        updated[res.id] = res.status;
+        return updated;
+      });
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === tempId ? { ...m, _id: res.id } : m
+        )
+      );
+    });
 
     setCurrentMessage("");
   };
@@ -114,10 +136,8 @@ export const Chat = ({ user }) => {
         params: { sender: user.username, receiver },
       });
 
-      // set messages
       setMessages(data);
 
-      // set status
       const initialStatus = {};
       for (let i = 0; i < data.length; i++) {
         initialStatus[data[i]._id] = data[i].status || "sent";
@@ -128,7 +148,7 @@ export const Chat = ({ user }) => {
 
       socket.emit("join_room", roomId);
 
-      // mark delivered for old messages
+      // delivered for old messages
       for (let i = 0; i < data.length; i++) {
         if (data[i].status === "sent" && data[i].receiver === user.username) {
           socket.emit("message_delivered", {
@@ -166,7 +186,9 @@ export const Chat = ({ user }) => {
         <div className="chat-window">
           <MessageList messages={messages} user={user} status={status} />
 
-          {typingUser === currentChat && <p>{typingUser} is typing...</p>}
+          {typingUser === currentChat && (
+            <p>{typingUser} is typing...</p>
+          )}
 
           <input
             value={currentMessage}
