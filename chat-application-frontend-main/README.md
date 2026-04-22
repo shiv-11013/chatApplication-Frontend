@@ -93,4 +93,6 @@ npm start
 ## Author
 
 Shiv Kumar
+
 GitHub: https://github.com/shiv-11013/chatApplication-Frontend
+Email: shivkumar121112@gmail.com
