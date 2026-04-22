@@ -22,7 +22,9 @@ const Login = ({ setUser }) => {
         password,
       });
 
-      console.log("STEP 0: Login successful for", data.username);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
+
       setUser(data);
     } catch (error) {
       alert(error.response?.data?.message || "Error logging in");

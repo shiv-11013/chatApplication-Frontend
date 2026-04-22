@@ -19,14 +19,17 @@ export const Chat = ({ user }) => {
   const [currentMessage, setCurrentMessage] = useState("");
   const [status, setStatus] = useState({});
   const [typingUser, setTypingUser] = useState("");
+  const [unreadMessages, setUnreadMessages] = useState({});
 
   useEffect(() => {
     socket.emit("user_online", user.username);
 
     const fetchUsers = async () => {
       try {
+        const token = localStorage.getItem("token");
         const { data } = await axios.get(`${BASE_URL}/users`, {
           params: { currentUser: user.username },
+          headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(data);
       } catch (e) {
@@ -36,6 +39,22 @@ export const Chat = ({ user }) => {
     fetchUsers();
 
     socket.on("receive_message", (data) => {
+      // sirf current chat ke messages show karo
+      if (data.sender !== currentChat && data.receiver !== currentChat) {
+        // different chat ka message — unread count badhaao
+        setUnreadMessages((prev) => ({
+          ...prev,
+          [data.sender]: (prev[data.sender] || 0) + 1,
+        }));
+
+        // delivered emit karo
+        socket.emit("message_delivered", {
+          messageId: data._id,
+          roomId: [user.username, data.sender].sort().join("_"),
+        });
+        return;
+      }
+
       setMessages((prev) => {
         const exists = prev.find((m) => m._id === data._id);
         if (exists) return prev;
@@ -136,11 +155,19 @@ export const Chat = ({ user }) => {
 
   const fetchMessages = async (receiver) => {
     try {
+      const token = localStorage.getItem("token");
       const { data } = await axios.get(`${BASE_URL}/messages`, {
         params: { sender: user.username, receiver },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setMessages(data);
+
+      // unread count clear karo is user ka
+      setUnreadMessages((prev) => ({
+        ...prev,
+        [receiver]: 0,
+      }));
 
       const initialStatus = {};
       for (let i = 0; i < data.length; i++) {
@@ -178,8 +205,19 @@ export const Chat = ({ user }) => {
       <div className="chat-list">
         <h3>Chats</h3>
         {users.map((u) => (
-          <div key={u._id} onClick={() => fetchMessages(u.username)}>
-            {u.username}
+          <div key={u._id} onClick={() => fetchMessages(u.username)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>{u.username}</span>
+            {unreadMessages[u.username] > 0 && (
+              <span style={{
+                background: "green",
+                color: "white",
+                borderRadius: "50%",
+                padding: "2px 7px",
+                fontSize: "12px",
+              }}>
+                {unreadMessages[u.username]}
+              </span>
+            )}
           </div>
         ))}
       </div>

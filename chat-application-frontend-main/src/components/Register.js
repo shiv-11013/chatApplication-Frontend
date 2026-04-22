@@ -9,23 +9,24 @@ const BASE_URL =
 const Register = ({ setUser }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [registerationSuccess, setRegistrationSuccess] = useState(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(null);
 
   const handleRegister = async () => {
     try {
+      if (!username || !password) return alert("Please fill all fields");
       const { data } = await axios.post(`${BASE_URL}/auth/register`, {
         username,
         password,
       });
 
       setRegistrationSuccess(
-        "You are registered successfully. Proceed to login."
+        "You are registered successfully. Proceed to login.",
       );
       setUser(data);
     } catch (error) {
       console.error(error.response?.data?.message || "Error registering user");
       setRegistrationSuccess(
-        error.response?.data?.message || "Error registering user"
+        error.response?.data?.message || "Error registering user",
       );
     } finally {
       setTimeout(() => setRegistrationSuccess(null), 2000);
@@ -60,7 +61,7 @@ const Register = ({ setUser }) => {
           Register
         </button>
 
-        {registerationSuccess && <p>{registerationSuccess}</p>}
+        {registrationSuccess && <p>{registrationSuccess}</p>}
       </div>
     </div>
   );
