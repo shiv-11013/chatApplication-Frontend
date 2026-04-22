@@ -1,70 +1,96 @@
-# Getting Started with Create React App
+# Chat Application (Frontend)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is a real-time chat application frontend built using React.
+Users can register, login, and chat with other users in real time.
 
-## Available Scripts
+The application is connected to a backend using REST APIs and Socket.IO for real-time communication.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Live Demo
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+https://chat-application-frontend-plum-theta.vercel.app/
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## Features
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- User registration and login
+- Real-time messaging using Socket.IO
+- Message status (sent, delivered, seen)
+- Typing indicator
+- One-to-one chat between users
+- Responsive UI using Bootstrap
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Tech Stack
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- React
+- Axios
+- Socket.IO Client
+- Bootstrap
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `npm run eject`
+## Project Structure
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Login and Register components for authentication
+- Chat component handles real-time messaging and socket connection
+- MessageList component displays messages with timestamp and status
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## How It Works
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- User logs in or registers
+- App connects to the backend server
+- Users list is fetched from the API
+- When a user opens a chat:
+  - Previous messages are loaded
+  - A socket room is joined
 
-## Learn More
+- Messages are sent and received in real time
+- Message status is updated (✔ sent, ✔✔ delivered, ✔✔ blue seen)
+- Typing event is emitted and shown in UI
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## API Base URL
 
-### Code Splitting
+The app automatically switches between local and deployed backend:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Local: http://localhost:5001
+- Production: https://chatapplication-backend-4nhj.onrender.com
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Run Locally
 
-### Making a Progressive Web App
+npm install
+npm start
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+---
 
-### Advanced Configuration
+## Notes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- Backend is required for full functionality
+- Socket connection is initialized on app load
+- Temporary message IDs are used before server response
+- Message status is updated based on socket events
 
-### Deployment
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Future Improvements
 
-### `npm run build` fails to minify
+- Add JWT authentication
+- Improve UI/UX
+- Add notifications
+- Add group chat
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## Author
+
+Shiv Kumar
+GitHub: https://github.com/shiv-11013/chatApplication-Frontend
