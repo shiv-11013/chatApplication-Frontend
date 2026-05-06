@@ -1,99 +1,314 @@
 # Chat Application (Frontend)
 
-This is a real-time chat application frontend built using React.
-Users can register, login, and chat with other users in real time.
-
-The application is connected to a backend using REST APIs and Socket.IO for real-time communication.
-
----
-
-## Live Demo
-
-https://chat-application-frontend-plum-theta.vercel.app/
-
----
+Real-time chat application frontend built with React.js, Socket.IO, Axios, and Bootstrap.
 
 ## Features
 
-- User registration and login
-- Real-time messaging using Socket.IO
-- Message status (sent, delivered, seen)
-- Typing indicator
-- One-to-one chat between users
-- Responsive UI using Bootstrap
+* User Registration
+* User Login
+* JWT Authentication
+* Real-time Messaging
+* Message Delivery Status
+* Seen Message Status
+* Typing Indicator
+* Unread Message Count
+* Online User Communication
+* Responsive Chat UI
 
 ---
 
-## Tech Stack
+# Tech Stack
 
-- React
-- Axios
-- Socket.IO Client
-- Bootstrap
-
----
-
-## Project Structure
-
-- Login and Register components for authentication
-- Chat component handles real-time messaging and socket connection
-- MessageList component displays messages with timestamp and status
+* React.js
+* Socket.IO Client
+* Axios
+* Bootstrap
+* CSS
 
 ---
 
-## How It Works
+# Project Structure
 
-- User logs in or registers
-- App connects to the backend server
-- Users list is fetched from the API
-- When a user opens a chat:
-  - Previous messages are loaded
-  - A socket room is joined
-
-- Messages are sent and received in real time
-- Message status is updated (✔ sent, ✔✔ delivered, ✔✔ blue seen)
-- Typing event is emitted and shown in UI
+```bash
+chat-application-frontend-main/
+│
+├── node_modules/
+│
+├── public/
+│
+├── src/
+│   │
+│   ├── components/
+│   │   ├── chat.css
+│   │   ├── Chat.js
+│   │   ├── Login.js
+│   │   ├── MessageList.js
+│   │   └── Register.js
+│   │
+│   ├── App.css
+│   ├── App.js
+│   ├── App.test.js
+│   ├── index.css
+│   ├── index.js
+│   ├── logo.svg
+│   ├── reportWebVitals.js
+│   ├── setupTests.js
+│   └── styles.css
+│
+├── .gitignore
+├── package-lock.json
+├── package.json
+└── README.md
+```
 
 ---
 
-## API Base URL
+# Installation
 
-The app automatically switches between local and deployed backend:
+## 1. Clone Repository
 
-- Local: http://localhost:5001
-- Production: https://chatapplication-backend-4nhj.onrender.com
+```bash
+git clone <your-repository-url>
+```
 
----
+## 2. Move Into Project Folder
 
-## Run Locally
+```bash
+cd chat-application-frontend-main
+```
 
+## 3. Install Dependencies
+
+```bash
 npm install
+```
+
+## 4. Start Frontend
+
+```bash
 npm start
+```
+
+Frontend runs on:
+
+```bash
+http://localhost:3000
+```
 
 ---
 
-## Notes
+# Backend Connection
 
-- Backend is required for full functionality
-- Socket connection is initialized on app load
-- Temporary message IDs are used before server response
-- Message status is updated based on socket events
+Frontend automatically switches between local backend and deployed backend.
+
+## Local Backend
+
+```bash
+http://localhost:5001
+```
+
+## Production Backend
+
+```bash
+https://chatapplication-backend-4nhj.onrender.com
+```
 
 ---
 
-## Future Improvements
+# Components
 
-- Add JWT authentication
-- Improve UI/UX
-- Add notifications
-- Add group chat
+## App.js
+
+Main application component.
+
+Responsibilities:
+
+* Authentication state handling
+* Login/Register rendering
+* Logout functionality
+* Chat component rendering
 
 ---
 
-## Author
+## Register.js
+
+Handles:
+
+* User registration
+* API request using Axios
+* Success and error handling
+
+---
+
+## Login.js
+
+Handles:
+
+* User login
+* JWT token storage
+* LocalStorage management
+* Authentication state update
+
+---
+
+## Chat.js
+
+Main real-time chat component. 
+
+Features:
+
+* Fetch users
+* Fetch messages
+* Real-time messaging
+* Socket.IO integration
+* Typing indicator
+* Seen status
+* Delivered status
+* Unread message count
+* Room-based communication
+
+---
+
+## MessageList.js
+
+Handles:
+
+* Rendering messages
+* Message timestamps
+* Status ticks display
+* Sent/Delivered/Seen UI
+
+---
+
+# Authentication Flow
+
+1. User registers or logs in.
+2. Backend returns JWT token.
+3. Token stored in localStorage.
+4. Protected backend APIs use Authorization header.
+5. User accesses chat system.
+
+---
+
+# Socket.IO Events
+
+## Client Emit Events
+
+### User Online
+
+```javascript
+socket.emit("user_online", username);
+```
+
+### Join Room
+
+```javascript
+socket.emit("join_room", roomId);
+```
+
+### Send Message
+
+```javascript
+socket.emit("send_message", messageData);
+```
+
+### Typing Event
+
+```javascript
+socket.emit("typing", {
+  sender,
+  roomId,
+});
+```
+
+### Mark Seen
+
+```javascript
+socket.emit("mark_messages_seen", {
+  sender,
+  receiver,
+  roomId,
+});
+```
+
+---
+
+## Client Listen Events
+
+### Receive Message
+
+```javascript
+socket.on("receive_message", (data) => {});
+```
+
+### Status Updated
+
+```javascript
+socket.on("status_updated", (data) => {});
+```
+
+### All Messages Seen
+
+```javascript
+socket.on("all_messages_seen", (data) => {});
+```
+
+### User Typing
+
+```javascript
+socket.on("user_typing", (sender) => {});
+```
+
+---
+
+# Message Status System
+
+## ✔ Sent
+
+Message stored locally and sent to backend.
+
+## ✔✔ Delivered
+
+Receiver is online and message delivered.
+
+## ✔✔ Blue
+
+Receiver opened the chat and message seen.
+
+---
+
+# Run Locally
+
+## Install Packages
+
+```bash
+npm install
+```
+
+## Start Frontend
+
+```bash
+npm start
+```
+
+---
+
+# Future Improvements
+
+* Add profile pictures
+* Add dark mode
+* Add image sharing
+* Add group chat
+* Add voice/video calls
+* Add emoji support
+* Add notifications
+* Add responsive mobile UI improvements
+
+---
+
+# Author
 
 Shiv Kumar
 
-GitHub: https://github.com/shiv-11013/chatApplication-Frontend
-
-Email: shivkumar121112@gmail.com
+GitHub:
+[https://github.com/shiv-11013](https://github.com/shiv-11013)
