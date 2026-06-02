@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import { Chat } from "./components/Chat";
+import Login from "./components/auth/Login";
+import Register from "./components/auth/Register";
+import { Chat } from "./components/chat/Chat";
+import "./App.css";
 import "bootstrap/dist/js/bootstrap.min.js";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -18,26 +19,23 @@ const App = () => {
 
   return (
     <div className="app">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 20px" }}>
+      <header className="app-header">
         <h1>Chat App</h1>
+
         {user && (
-          <button className="btn btn-danger" onClick={handleLogout}>
+          <button className="app-logout-button" onClick={handleLogout}>
             Logout
           </button>
         )}
-      </div>
+      </header>
 
       {!user ? (
-        <div className="container mt-5 text-center">
-          <div className="row">
-            <div className="col-md-6">
-              <Register setUser={setUser} />
-            </div>
-            <div className="col-md-6">
-              <Login setUser={setUser} />
-            </div>
+        <main className="auth-page">
+          <div className="auth-grid">
+            <Register setUser={setUser} />
+            <Login setUser={setUser} />
           </div>
-        </div>
+        </main>
       ) : (
         <Chat user={user} />
       )}

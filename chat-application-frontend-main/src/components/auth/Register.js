@@ -14,7 +14,7 @@ const Register = ({ setUser }) => {
   const handleRegister = async () => {
     try {
       if (!username || !password) return alert("Please fill all fields");
-      const { data } = await axios.post(`${BASE_URL}/auth/register`, {
+      await axios.post(`${BASE_URL}/auth/register`, {
         username,
         password,
       });
@@ -22,7 +22,6 @@ const Register = ({ setUser }) => {
       setRegistrationSuccess(
         "You are registered successfully. Proceed to login.",
       );
-      setUser(data);
     } catch (error) {
       console.error(error.response?.data?.message || "Error registering user");
       setRegistrationSuccess(
