@@ -1,6 +1,12 @@
 import React, { useRef } from "react";
 
-const MessageList = ({ messages, currentUsername, isLoading, error }) => {
+const MessageList = ({
+  messages,
+  currentUsername,
+  isLoading,
+  error,
+  messagesEndRef,
+}) => {
   const listRef = useRef(null);
 
   const formatMessageTime = (date) => {
@@ -36,9 +42,7 @@ const MessageList = ({ messages, currentUsername, isLoading, error }) => {
             key={msg._id}
             className={isSentByMe ? "message-row sent" : "message-row received"}
           >
-            <p className="message-text">
-              <strong>{isSentByMe ? "You" : msg.sender}:</strong> {msg.message}
-            </p>
+            <p className="message-text">{msg.message}</p>
 
             <div className="message-meta">
               <small className="message-time">
@@ -60,6 +64,8 @@ const MessageList = ({ messages, currentUsername, isLoading, error }) => {
           </div>
         );
       })}
+
+      <div ref={messagesEndRef} />
     </div>
   );
 };

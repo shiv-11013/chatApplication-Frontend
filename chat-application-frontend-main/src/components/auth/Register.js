@@ -1,68 +1,82 @@
 import React, { useState } from "react";
+import { BASE_URL } from "../../config/api";
 import axios from "axios";
 
-const BASE_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:5001"
-    : "https://chatapplication-backend-4nhj.onrender.com";
-
-const Register = ({ setUser }) => {
+const Register = ({ onRegistered }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [registrationSuccess, setRegistrationSuccess] = useState(null);
+  const [registrationMessage, setRegistrationMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    if (!username.trim() || !password) {
+      setRegistrationMessage("Please fill all fields");
+      return;
+    }
+
+    setLoading(true);
+    setRegistrationMessage("");
+
     try {
-      if (!username || !password) return alert("Please fill all fields");
       await axios.post(`${BASE_URL}/auth/register`, {
-        username,
+        username: username.trim(),
         password,
       });
 
-      setRegistrationSuccess(
-        "You are registered successfully. Proceed to login.",
-      );
+      setRegistrationMessage("Account created. Please login now.");
+
+      setTimeout(() => {
+        setRegistrationMessage("");
+        onRegistered();
+      }, 900);
     } catch (error) {
-      console.error(error.response?.data?.message || "Error registering user");
-      setRegistrationSuccess(
+      setRegistrationMessage(
         error.response?.data?.message || "Error registering user",
       );
     } finally {
-      setTimeout(() => setRegistrationSuccess(null), 2000);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="card py-5 text-center">
-      <div className="card-body px-5">
-        <h2>Register</h2>
-        <p>Not a user yet? Register here</p>
+    <form className="auth-form" onSubmit={handleRegister}>
+      <h2>Create account</h2>
+      <p>Register to start chatting in real time.</p>
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          className="form-control form-control-lg mt-3"
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          className="form-control form-control-lg mt-3"
-          onChange={(e) => setPassword(e.target.value)}
-        />
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        className="auth-input"
+        onChange={(e) => setUsername(e.target.value)}
+        autoComplete="username"
+        required
+      />
 
-        <button
-          className="btn btn-success btn-lg mt-3"
-          onClick={handleRegister}
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        className="auth-input"
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete="new-password"
+        required
+      />
+
+      {registrationMessage && (
+        <p
+          className={`auth-message ${registrationMessage.includes("created") ? "success" : ""}`}
         >
-          Register
-        </button>
+          {registrationMessage}
+        </p>
+      )}
 
-        {registrationSuccess && <p>{registrationSuccess}</p>}
-      </div>
-    </div>
+      <button className="auth-submit-button" type="submit" disabled={loading}>
+        {loading ? "Creating account..." : "Register"}
+      </button>
+    </form>
   );
 };
 

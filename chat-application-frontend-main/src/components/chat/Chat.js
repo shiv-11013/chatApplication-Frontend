@@ -3,13 +3,14 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { BASE_URL } from "../../config/api";
 import MessageList from "./MessageList";
+import { upload } from "@imagekit/javascript";
 import "../../styles/chat.css";
 
 const socket = io(BASE_URL, {
   autoConnect: false,
 });
 
-export const Chat = ({ user }) => {
+export const Chat = ({ user, setUser }) => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentRoomId, setCurrentRoomId] = useState("");
@@ -18,12 +19,25 @@ export const Chat = ({ user }) => {
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState("");
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [typingUser, setTypingUser] = useState("");
+
+  const [currentUserAvatar, setCurrentUserAvatar] = useState(user.avatar || "");
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const selectedUserRef = useRef(null);
   const currentRoomIdRef = useRef("");
   const messagesAreaRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const isTypingRef = useRef(false);
 
-  const lastMessageId = messages[messages.length - 1]?._id;
+  const lastMessage = messages[messages.length - 1];
+  const lastMessageId = lastMessage?._id;
+  const forceScrollToLatestRef = useRef(false);
+  const userIsNearBottomRef = useRef(true);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     selectedUserRef.current = selectedUser;
@@ -31,15 +45,32 @@ export const Chat = ({ user }) => {
   }, [selectedUser, currentRoomId]);
 
   useEffect(() => {
+    if (isMessagesLoading || messages.length === 0) return;
+
+    const shouldScroll =
+      forceScrollToLatestRef.current || userIsNearBottomRef.current;
+
+    if (!shouldScroll) return;
+
     const frameId = requestAnimationFrame(() => {
-      if (messagesAreaRef.current) {
-        messagesAreaRef.current.scrollTop =
-          messagesAreaRef.current.scrollHeight;
-      }
+      requestAnimationFrame(() => {
+        const messagesArea = messagesAreaRef.current;
+        if (!messagesArea) return;
+
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+        forceScrollToLatestRef.current = false;
+        userIsNearBottomRef.current = true;
+      });
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [messages.length, lastMessageId]);
+  }, [
+    isMessagesLoading,
+    messages.length,
+    lastMessageId,
+    lastMessage?.sender,
+    user.username,
+  ]);
 
   useEffect(() => {
     if (!socket.connected) {
@@ -56,10 +87,9 @@ export const Chat = ({ user }) => {
     });
 
     socket.on("receive_message", (savedMessage) => {
-      if (
-        savedMessage.sender !== selectedUserRef.current &&
-        savedMessage.sender !== user.username
-      ) {
+      const isIncomingMessage = savedMessage.receiver === user.username;
+      const isCurrentOpenChat = savedMessage.sender === selectedUserRef.current;
+      if (isIncomingMessage && !isCurrentOpenChat) {
         return setUnreadCounts((prev) => ({
           ...prev,
           [savedMessage.sender]: (prev[savedMessage.sender] || 0) + 1,
@@ -74,9 +104,6 @@ export const Chat = ({ user }) => {
 
         return [...prevMessages, savedMessage];
       });
-
-      const isIncomingMessage = savedMessage.receiver === user.username;
-      const isCurrentOpenChat = savedMessage.sender === selectedUserRef.current;
 
       if (isIncomingMessage && isCurrentOpenChat) {
         socket.emit("mark_messages_seen", {
@@ -99,12 +126,35 @@ export const Chat = ({ user }) => {
       setUnreadCounts(counts);
     });
 
+    socket.on("online_users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    socket.on("user_typing", ({ sender }) => {
+      if (sender === selectedUserRef.current) {
+        setTypingUser(sender);
+      }
+    });
+
+    socket.on("user_stopped_typing", ({ sender }) => {
+      if (sender === selectedUserRef.current) {
+        setTypingUser("");
+      }
+    });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("receive_message");
       socket.off("message_status_updated");
       socket.off("unread_counts");
+      socket.off("online_users");
+      socket.off("user_typing");
+      socket.off("user_stopped_typing");
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
       socket.disconnect();
     };
   }, [user.username]);
@@ -133,12 +183,37 @@ export const Chat = ({ user }) => {
     fetchUsers();
   }, [user.username]);
 
+  const stopTyping = (roomId = currentRoomIdRef.current) => {
+    if (!roomId || !isTypingRef.current) return;
+    socket.emit("typing_stopped", { roomId, sender: user.username });
+    isTypingRef.current = false;
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  };
+
+  const handleMessagesAreaScroll = () => {
+    const messagesArea = messagesAreaRef.current;
+    if (!messagesArea) return;
+    const distanceFromBottom =
+      messagesArea.scrollHeight -
+      messagesArea.scrollTop -
+      messagesArea.clientHeight;
+    userIsNearBottomRef.current = distanceFromBottom < 120;
+  };
+
   const handleSelectUser = async (selectedUsername) => {
+    stopTyping(currentRoomIdRef.current);
+    forceScrollToLatestRef.current = true;
+    userIsNearBottomRef.current = true;
+    setTypingUser("");
     const roomId = [user.username, selectedUsername].sort().join("_");
 
     setSelectedUser(selectedUsername);
     setCurrentRoomId(roomId);
     setMessages([]);
+
     setIsMessagesLoading(true);
     setMessagesError("");
 
@@ -160,6 +235,7 @@ export const Chat = ({ user }) => {
         },
       });
 
+      console.log("messages count", data.length);
       setMessages(data);
 
       socket.emit("mark_messages_seen", {
@@ -181,6 +257,29 @@ export const Chat = ({ user }) => {
     console.log("Joined room:", roomId);
   };
 
+  const handleMessageChange = (event) => {
+    const value = event.target.value;
+    setMessage(value);
+
+    if (!selectedUserRef.current || !currentRoomIdRef.current) return;
+
+    if (!value.trim()) {
+      stopTyping();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      socket.emit("typing_started", {
+        roomId: currentRoomIdRef.current,
+        sender: user.username,
+      });
+      isTypingRef.current = true;
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => stopTyping(), 900);
+  };
+
   const handleSendMessage = () => {
     const text = message.trim();
 
@@ -194,46 +293,194 @@ export const Chat = ({ user }) => {
     });
 
     setMessage("");
+    stopTyping();
   };
 
   const isSendDisabled = !message.trim() || !selectedUser || !currentRoomId;
+  const selectedUserIsOnline = selectedUser
+    ? onlineUsers.includes(selectedUser)
+    : false;
+
+  const handleProfilePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Please select a valid image file.");
+      return;
+    }
+
+    if (file.size > 1024 * 1024) {
+      setAvatarError("Image must be less than 1MB.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    try {
+      setIsAvatarUploading(true);
+      setAvatarError("");
+
+      const { data: authParams } = await axios.get(`${BASE_URL}/upload/auth`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const uploadResponse = await upload({
+        file,
+        fileName: `avatar-${user.username}-${Date.now()}-${file.name}`,
+        folder: "/chat-app/avatars",
+        token: authParams.token,
+        signature: authParams.signature,
+        expire: authParams.expire,
+        publicKey: authParams.publicKey,
+      });
+
+      const { data } = await axios.patch(
+        `${BASE_URL}/users/avatar`,
+        { avatar: uploadResponse.url },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const savedUser = JSON.parse(localStorage.getItem("user")) || user;
+      const updatedUser = {
+        ...savedUser,
+        avatar: data.user.avatar,
+      };
+
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setCurrentUserAvatar(data.user.avatar);
+
+      if (setUser) {
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      setAvatarError(
+        error.response?.data?.message || "Could not update profile photo.",
+      );
+    } finally {
+      setIsAvatarUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const selectedChatUser = users.find(
+    (chatUser) => chatUser.username === selectedUser,
+  );
+
+  const filteredUsers = users.filter((u) =>
+    u.username.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="chat-shell">
       <aside className="chat-sidebar">
         <div className="chat-sidebar-header">
-          <h2>Chats</h2>
-          <p>{user.username}</p>
+          <label className="current-user-avatar" htmlFor="profile-avatar">
+            {currentUserAvatar ? (
+              <img src={currentUserAvatar} alt={user.username} />
+            ) : (
+              user.username.charAt(0).toUpperCase()
+            )}
+          </label>
+
+          <div>
+            <h2>Chats</h2>
+            <p>{isAvatarUploading ? "Uploading photo..." : user.username}</p>
+            {avatarError && <span className="avatar-error">{avatarError}</span>}
+          </div>
+
+          <input
+            id="profile-avatar"
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={handleProfilePhotoChange}
+            disabled={isAvatarUploading}
+          />
+        </div>
+
+        <div className="chat-search">
+          <input
+            className="chat-search-input"
+            type="text"
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         <div className="chat-user-list">
-          {users.map((chatUser) => (
-            <button
-              key={chatUser._id}
-              onClick={() => handleSelectUser(chatUser.username)}
-              className={
-                selectedUser === chatUser.username
-                  ? "chat-user-button active"
-                  : "chat-user-button"
-              }
-            >
-              <span>{chatUser.username}</span>
-              {unreadCounts[chatUser.username] > 0 && (
-                <span className="chat-unread-badge">
-                  {unreadCounts[chatUser.username]}
+          {filteredUsers.map((chatUser) => {
+            const isOnline = onlineUsers.includes(chatUser.username);
+            return (
+              <button
+                key={chatUser._id}
+                onClick={() => handleSelectUser(chatUser.username)}
+                className={
+                  selectedUser === chatUser.username
+                    ? "chat-user-button active"
+                    : "chat-user-button"
+                }
+              >
+                <span className="chat-user-main">
+                  <span className="chat-user-avatar">
+                    {chatUser.avatar ? (
+                      <img src={chatUser.avatar} alt={chatUser.username} />
+                    ) : (
+                      chatUser.username.charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className="chat-user-info">
+                    <span className="chat-user-name">{chatUser.username}</span>
+                    <span
+                      className={
+                        isOnline
+                          ? "chat-user-status online"
+                          : "chat-user-status"
+                      }
+                    >
+                      {isOnline ? "Online" : "Offline"}
+                    </span>
+                  </span>
                 </span>
-              )}
-            </button>
-          ))}
+                {unreadCounts[chatUser.username] > 0 && (
+                  <span className="chat-unread-badge">
+                    {unreadCounts[chatUser.username]}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </aside>
 
       <main className="chat-main">
         <header className="chat-main-header">
           {selectedUser ? (
-            <div>
-              <h2>{selectedUser}</h2>
-              <p>Active conversation</p>
+            <div className="chat-header-user">
+              <span className="chat-header-avatar">
+                {selectedChatUser?.avatar ? (
+                  <img src={selectedChatUser.avatar} alt={selectedUser} />
+                ) : (
+                  selectedUser.charAt(0).toUpperCase()
+                )}
+              </span>
+              <div>
+                <h2>{selectedUser}</h2>
+                <p className={typingUser ? "typing-text" : ""}>
+                  {typingUser
+                    ? `${typingUser} is typing...`
+                    : selectedUserIsOnline
+                      ? "Online"
+                      : "Offline"}
+                </p>
+              </div>
             </div>
           ) : (
             <div>
@@ -243,12 +490,17 @@ export const Chat = ({ user }) => {
           )}
         </header>
 
-        <section className="chat-messages-area" ref={messagesAreaRef}>
+        <section
+          className="chat-messages-area"
+          ref={messagesAreaRef}
+          onScroll={handleMessagesAreaScroll}
+        >
           <MessageList
             messages={messages}
             currentUsername={user.username}
             isLoading={isMessagesLoading}
             error={messagesError}
+            messagesEndRef={messagesEndRef}
           />
         </section>
 
@@ -257,7 +509,7 @@ export const Chat = ({ user }) => {
             <input
               className="chat-input"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleMessageChange}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleSendMessage();

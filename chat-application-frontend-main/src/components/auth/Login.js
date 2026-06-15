@@ -1,24 +1,27 @@
 import React, { useState } from "react";
 import axios from "axios";
-
-const BASE_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:5001"
-    : "https://chatapplication-backend-4nhj.onrender.com";
+import { BASE_URL } from "../../config/api";
 
 const Login = ({ setUser }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleLogin = async (e) => {
-    if (e) e.preventDefault();
-    if (!username || !password) return alert("Please fill all fields");
+    e.preventDefault();
+
+    if (!username.trim() || !password) {
+      setMessage("Please fill all fields");
+      return;
+    }
 
     setLoading(true);
+    setMessage("");
+
     try {
       const { data } = await axios.post(`${BASE_URL}/auth/login`, {
-        username,
+        username: username.trim(),
         password,
       });
 
@@ -27,46 +30,43 @@ const Login = ({ setUser }) => {
 
       setUser(data);
     } catch (error) {
-      alert(error.response?.data?.message || "Error logging in");
+      setMessage(error.response?.data?.message || "Error logging in");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="card py-5 text-center">
-      <div className="card-body px-5">
-        <h2>Login</h2>
-        <p>Login with your credentials to continue.</p>
+    <form className="auth-form" onSubmit={handleLogin}>
+      <h2>Welcome back</h2>
+      <p>Login with your credentials to continue.</p>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            className="form-control form-control-lg mt-3"
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            className="form-control form-control-lg mt-3"
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        className="auth-input"
+        onChange={(e) => setUsername(e.target.value)}
+        autoComplete="username"
+        required
+      />
 
-          <button
-            type="submit"
-            className="btn btn-success btn-lg mt-3"
-            disabled={loading}
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-      </div>
-    </div>
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        className="auth-input"
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete="current-password"
+        required
+      />
+
+      {message && <p className="auth-message">{message}</p>}
+
+      <button className="auth-submit-button" type="submit" disabled={loading}>
+        {loading ? "Logging in..." : "Login"}
+      </button>
+    </form>
   );
 };
 
